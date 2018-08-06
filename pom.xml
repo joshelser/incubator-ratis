@@ -54,6 +54,7 @@
     <module>ratis-assembly</module>
     <module>ratis-examples</module>
     <module>ratis-replicated-map</module>
+    <module>ratis-replicated-list</module>
   </modules>
 
   <pluginRepositories>

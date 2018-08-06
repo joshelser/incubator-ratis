@@ -1,0 +1,84 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+syntax = "proto3";
+option java_package = "org.apache.ratis.shaded.proto.rlist";
+option java_outer_classname = "RListProtos";
+option java_generate_equals_and_hash = true;
+package ratis.rlist;
+
+
+message ListProto {
+  repeated bytes data = 1;
+}
+
+// Outer wrapper for all Raft "requests"
+message RaftRequest {
+  AppendRequest append = 1;
+  GetRequest get = 2;
+  InsertRequest insert = 3;
+  SizeRequest size = 4;
+  SetRequest set = 5;
+}
+
+// Outer wrapper for all Raft "responses"
+message RaftResponse {
+  AppendResponse append = 1;
+  GetResponse get = 2;
+  InsertResponse insert = 3;
+  SizeResponse size = 4;
+  SetResponse set = 5;
+}
+
+message AppendRequest {
+  bytes data = 1;
+}
+message AppendResponse {}
+
+message GetRequest {
+  uint32 index = 1;
+}
+message GetResponse {
+  bytes data = 1;
+}
+
+message InsertRequest {
+  uint32 index = 1;
+  bytes data = 2;
+}
+message InsertResponse {}
+
+message SizeRequest{}
+message SizeResponse {
+  uint32 size = 1;
+}
+
+message SetRequest {
+  uint32 index = 1;
+  bytes data = 2;
+}
+message SetResponse {
+  bytes prev_data = 1;
+}
+
+service ListService {
+  rpc append(AppendRequest) returns (AppendResponse);
+  rpc get(GetRequest) returns (GetResponse);
+  rpc insert(InsertRequest) returns (InsertResponse);
+  rpc size(SizeRequest) returns (SizeResponse);
+  rpc set(SetRequest) returns (SetResponse);
+}
