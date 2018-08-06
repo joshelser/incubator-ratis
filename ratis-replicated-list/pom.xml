@@ -25,86 +25,49 @@
 
   <dependencies>
     <dependency>
+      <groupId>org.apache.ratis</groupId>
       <artifactId>ratis-proto-shaded</artifactId>
-      <groupId>org.apache.ratis</groupId>
     </dependency>
     <dependency>
+      <groupId>org.apache.ratis</groupId>
       <artifactId>ratis-common</artifactId>
-      <groupId>org.apache.ratis</groupId>
     </dependency>
     <dependency>
-      <artifactId>ratis-common</artifactId>
       <groupId>org.apache.ratis</groupId>
-      <scope>test</scope>
-      <type>test-jar</type>
-    </dependency>
-    <dependency>
       <artifactId>ratis-client</artifactId>
-      <groupId>org.apache.ratis</groupId>
     </dependency>
     <dependency>
-      <artifactId>ratis-client</artifactId>
       <groupId>org.apache.ratis</groupId>
-      <scope>test</scope>
-      <type>test-jar</type>
-    </dependency>
-    <dependency>
       <artifactId>ratis-server</artifactId>
-      <groupId>org.apache.ratis</groupId>
     </dependency>
-    <dependency>
-      <artifactId>ratis-server</artifactId>
-      <groupId>org.apache.ratis</groupId>
-      <scope>test</scope>
-      <type>test-jar</type>
-    </dependency>
-    <dependency>
-      <artifactId>ratis-hadoop</artifactId>
-      <groupId>org.apache.ratis</groupId>
-    </dependency>
-    <dependency>
-      <artifactId>ratis-hadoop</artifactId>
-      <groupId>org.apache.ratis</groupId>
-      <scope>test</scope>
-      <type>test-jar</type>
-    </dependency>
-    <dependency>
-      <artifactId>ratis-grpc</artifactId>
-      <groupId>org.apache.ratis</groupId>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <artifactId>ratis-grpc</artifactId>
-      <groupId>org.apache.ratis</groupId>
-      <scope>test</scope>
-      <type>test-jar</type>
-    </dependency>
-    <dependency>
-      <artifactId>ratis-netty</artifactId>
-      <groupId>org.apache.ratis</groupId>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <artifactId>ratis-netty</artifactId>
-      <groupId>org.apache.ratis</groupId>
-      <scope>test</scope>
-      <type>test-jar</type>
-    </dependency>
-
+    <!-- Third-party -->
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
     </dependency>
-
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <scope>test</scope>
     </dependency>
+    <!-- Test-only -->
     <dependency>
-      <groupId>org.mockito</groupId>
-      <artifactId>mockito-all</artifactId>
+      <groupId>org.apache.ratis</groupId>
+      <artifactId>ratis-common</artifactId>
       <scope>test</scope>
+      <type>test-jar</type>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.ratis</groupId>
+      <artifactId>ratis-server</artifactId>
+      <scope>test</scope>
+      <type>test-jar</type>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.ratis</groupId>
+      <artifactId>ratis-grpc</artifactId>
+      <scope>test</scope>
+      <type>test-jar</type>
     </dependency>
   </dependencies>
 </project>

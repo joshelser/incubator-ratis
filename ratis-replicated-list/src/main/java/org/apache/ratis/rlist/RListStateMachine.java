@@ -43,8 +43,15 @@ import org.apache.ratis.util.JavaUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class ListStateMachine extends BaseStateMachine {
-  private static final Logger LOG = LoggerFactory.getLogger(ListStateMachine.class);
+/**
+ * A state machine that implements a basic {@link java.util.List} data structure. The list only stores Java Strings.
+ *
+ * The StateMachine expects {@link RaftRequest} messages in the Ratis {@link Message} class, and returns
+ * a {@link RaftResponse} message back to the client. The list is kept in memory, so the size of the list
+ * this state machine can hold is bounded by the available memory of the process running the state machine.
+ */
+public class RListStateMachine extends BaseStateMachine {
+  private static final Logger LOG = LoggerFactory.getLogger(RListStateMachine.class);
 
   private final SimpleStateMachineStorage smStorage = new SimpleStateMachineStorage();
   private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock(true);
@@ -86,6 +93,7 @@ public class ListStateMachine extends BaseStateMachine {
     final TermIndex last = SimpleStateMachineStorage.getTermIndexFromSnapshotFile(snapshotFile);
     try (AutoCloseableLock writeLock = writeLock()) {
       setLastAppliedTermIndex(last);
+      // Pull the list from the serialized protobuf
       try (InputStream in = new BufferedInputStream(new FileInputStream(snapshotFile))) {
         RListProtos.ListProto protoList = RListProtos.ListProto.parseFrom(in);
         protoList.getDataList().stream().map((bytes) -> data.add(bytes.toStringUtf8()));
@@ -103,9 +111,11 @@ public class ListStateMachine extends BaseStateMachine {
       last = getLastAppliedTermIndex();
     }
 
+    // We only have one snapshot file because we're using the SimpleStateMachineStorage implementation
     final File snapshotFile = smStorage.getSnapshotFile(last.getTerm(), last.getIndex());
     LOG.info("Snapshotting into file {}", snapshotFile);
 
+    // Serialize our list as a protobuf and send it to the snapshot file
     RListProtos.ListProto.Builder builder = RListProtos.ListProto.newBuilder();
     copy.stream().map((str) -> builder.addData(ByteString.copyFromUtf8(str)));
     try (OutputStream out = new BufferedOutputStream(new FileOutputStream(snapshotFile))) {
@@ -122,12 +132,14 @@ public class ListStateMachine extends BaseStateMachine {
 
   @Override
   public CompletableFuture<Message> query(Message request) {
+    // Parse the RaftRequest from the Message
     RaftRequest raftRequest;
     try {
       raftRequest = RaftRequest.parseFrom(request.getContent());
     } catch (IOException e) {
       return JavaUtils.completeExceptionally(e);
     }
+
     if (raftRequest.hasGet()) {
       // get[x]
       final GetRequest protoGet = raftRequest.getGet();
@@ -139,7 +151,8 @@ public class ListStateMachine extends BaseStateMachine {
       try (AutoCloseableLock rlock = readLock()) {
         int currentSize = data.size();
         if (index >= currentSize) {
-          return JavaUtils.completeExceptionally(new IOException("Get requested for index " + index + " but size is " + currentSize));
+          return JavaUtils.completeExceptionally(
+              new IOException("Get requested for index " + index + " but size is " + currentSize));
         }
         dataAtIndex = data.get(index);
       }
@@ -174,13 +187,17 @@ public class ListStateMachine extends BaseStateMachine {
   public CompletableFuture<Message> applyTransaction(TransactionContext txn) {
     final LogEntryProto entry = txn.getLogEntry();
     final ByteString requestData = entry.getSmLogEntry().getData();
-    RaftRequest raftRequest;
+    final RaftRequest raftRequest;
+
+    // Parse the RaftRequest
     try {
       raftRequest = RaftRequest.parseFrom(requestData);
     } catch (IOException e) {
       return JavaUtils.completeExceptionally(e);
     }
+
     if (raftRequest.hasInsert()) {
+      // insert(offset, value)
       final InsertRequest req = raftRequest.getInsert();
       final int insertionIndex = req.getIndex();
       final String insertionData = req.getData().toStringUtf8();
@@ -194,6 +211,7 @@ public class ListStateMachine extends BaseStateMachine {
           .toByteString());
       return CompletableFuture.completedFuture(resp);
     } else if (raftRequest.hasSet()) {
+      // set(offset, value)
       final SetRequest req = raftRequest.getSet();
       final int setIndex = req.getIndex();
       final String setData = req.getData().toStringUtf8();
@@ -211,6 +229,7 @@ public class ListStateMachine extends BaseStateMachine {
           .toByteString());
       return CompletableFuture.completedFuture(resp);
     } else if (raftRequest.hasAppend()) {
+      // append(value)
       final AppendRequest req = raftRequest.getAppend();
       final String appendData = req.getData().toStringUtf8();
       try (AutoCloseableLock writeLock = writeLock()) {
@@ -223,6 +242,7 @@ public class ListStateMachine extends BaseStateMachine {
           .toByteString());
       return CompletableFuture.completedFuture(resp);
     } else {
+      // Unknown...
       LOG.error(getId() + ": Unexpected request case " + TextFormat.shortDebugString(raftRequest));
       return JavaUtils.completeExceptionally(new IOException("Unknown message type"));
     }

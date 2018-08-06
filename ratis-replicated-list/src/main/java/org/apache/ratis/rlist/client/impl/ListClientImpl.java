@@ -1,10 +1,11 @@
-package org.apache.ratis.rlist.client;
+package org.apache.ratis.rlist.client.impl;
 
 import java.io.IOException;
 
 import org.apache.ratis.client.RaftClient;
+import org.apache.ratis.protocol.Message;
 import org.apache.ratis.protocol.RaftClientReply;
-import org.apache.ratis.rlist.RListMessage;
+import org.apache.ratis.rlist.client.ListClient;
 import org.apache.ratis.shaded.com.google.protobuf.ByteString;
 import org.apache.ratis.shaded.proto.rlist.RListProtos.AppendRequest;
 import org.apache.ratis.shaded.proto.rlist.RListProtos.GetRequest;
@@ -14,16 +15,21 @@ import org.apache.ratis.shaded.proto.rlist.RListProtos.RaftResponse;
 import org.apache.ratis.shaded.proto.rlist.RListProtos.SetRequest;
 import org.apache.ratis.shaded.proto.rlist.RListProtos.SizeRequest;
 
+/**
+ * Implementation of {@link ListClient} that sends the corresponding protobuf
+ * message to the ListStateMachine the RaftClient, and can unwrap the protobuf
+ * response to send the necessary value back to the caller.
+ */
 public class ListClientImpl implements ListClient {
 
   private final RaftClient raftClient;
 
-  ListClientImpl(RaftClient raftClient) {
+  public ListClientImpl(RaftClient raftClient) {
     this.raftClient = raftClient;
   }
 
   RaftResponse sendRaftMessage(RaftRequest request) throws IOException {
-    RaftClientReply reply = raftClient.send(new RListMessage(request));
+    RaftClientReply reply = raftClient.send(Message.valueOf(request.toByteString()));
     if (reply.isSuccess()) {
       return RaftResponse.parseFrom(reply.getMessage().getContent());
     }
@@ -31,7 +37,7 @@ public class ListClientImpl implements ListClient {
   }
 
   RaftResponse sendReadOnlyRaftMessage(RaftRequest request) throws IOException {
-    RaftClientReply reply = raftClient.sendReadOnly(new RListMessage(request));
+    RaftClientReply reply = raftClient.sendReadOnly(Message.valueOf(request.toByteString()));
     if (reply.isSuccess()) {
       return RaftResponse.parseFrom(reply.getMessage().getContent());
     }
