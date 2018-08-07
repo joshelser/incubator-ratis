@@ -67,6 +67,11 @@
       <groupId>org.apache.ratis</groupId>
       <artifactId>ratis-grpc</artifactId>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.ratis</groupId>
+      <artifactId>ratis-grpc</artifactId>
+      <scope>test</scope>
       <type>test-jar</type>
     </dependency>
   </dependencies>
