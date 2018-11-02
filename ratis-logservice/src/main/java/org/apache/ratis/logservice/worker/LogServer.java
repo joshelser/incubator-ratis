@@ -18,21 +18,8 @@
 
 package org.apache.ratis.logservice.worker;
 
-import com.beust.jcommander.JCommander;
-import com.beust.jcommander.Parameter;
-import org.apache.ratis.client.RaftClient;
-import org.apache.ratis.conf.RaftProperties;
-import org.apache.ratis.grpc.GrpcConfigKeys;
-import org.apache.ratis.logservice.api.LogStateMachine;
-import org.apache.ratis.logservice.server.ManagementStateMachine;
-import org.apache.ratis.logservice.util.MetaServiceProtoUtil;
-import org.apache.ratis.logservice.util.LogServiceUtils;
-import org.apache.ratis.netty.NettyConfigKeys;
-import org.apache.ratis.protocol.*;
-import org.apache.ratis.server.RaftServer;
-import org.apache.ratis.server.RaftServerConfigKeys;
-import org.apache.ratis.statemachine.StateMachine;
-import org.apache.ratis.util.NetUtils;
+import static org.apache.ratis.logservice.common.Constants.metaGroupID;
+import static org.apache.ratis.logservice.common.Constants.serversGroupID;
 
 import java.io.File;
 import java.io.IOException;
@@ -40,26 +27,51 @@ import java.net.InetSocketAddress;
 import java.util.Collections;
 import java.util.Set;
 
-import static org.apache.ratis.logservice.common.Constants.metaGroupID;
-import static org.apache.ratis.logservice.common.Constants.serversGroupID;
+import org.apache.ratis.client.RaftClient;
+import org.apache.ratis.conf.RaftProperties;
+import org.apache.ratis.grpc.GrpcConfigKeys;
+import org.apache.ratis.logservice.api.LogStateMachine;
+import org.apache.ratis.logservice.server.ManagementStateMachine;
+import org.apache.ratis.logservice.server.ServerOpts;
+import org.apache.ratis.logservice.util.LogServiceUtils;
+import org.apache.ratis.logservice.util.MetaServiceProtoUtil;
+import org.apache.ratis.netty.NettyConfigKeys;
+import org.apache.ratis.protocol.ClientId;
+import org.apache.ratis.protocol.RaftGroup;
+import org.apache.ratis.protocol.RaftGroupId;
+import org.apache.ratis.protocol.RaftPeer;
+import org.apache.ratis.protocol.RaftPeerId;
+import org.apache.ratis.server.RaftServer;
+import org.apache.ratis.server.RaftServerConfigKeys;
+import org.apache.ratis.statemachine.StateMachine;
+import org.apache.ratis.util.NetUtils;
 
-public class LogServiceWorker implements Cloneable{
+import com.beust.jcommander.JCommander;
+import com.beust.jcommander.Parameter;
 
-    @Parameter(names = "-port", description = "Port number")
+/**
+ * Daemon that runs the LogService State Machine.
+ */
+public class LogServer implements Cloneable{
+
     private int port;
 
-    @Parameter(names = "-dir", description = "Working directory")
     private  String workingDir;
 
-    @Parameter(names = "-meta", description = "Meta Quorum ID")
     private  String metaIdentity;
+
     RaftServer raftServer = null;
     RaftClient metaClient = null;
 
-    public LogServiceWorker() {
+    public LogServer() {
 
     }
-    public LogServiceWorker(String meta, int port, String workingDir) {
+
+    public LogServer(ServerOpts opts) {
+      this(opts.metaQuorum, opts.port, opts.workingDir);
+    }
+
+    public LogServer(String meta, int port, String workingDir) {
         this.metaIdentity = meta;
         this.port = port;
         this.workingDir = workingDir;
@@ -115,13 +127,20 @@ public class LogServiceWorker implements Cloneable{
     }
 
     public static void main(String[] args) throws IOException {
-        LogServiceWorker worker = new LogServiceWorker();
+        ServerOpts opts = new ServerOpts();
         JCommander.newBuilder()
-                .addObject(worker)
+                .addObject(opts)
                 .build()
                 .parse(args);
+        LogServer worker = new LogServer(opts);
         worker.start();
-
+        while (true) {
+          try {
+            Thread.sleep(1000);
+          } catch (InterruptedException e) {
+            return;
+          }
+        }
 
     }
 
@@ -135,12 +154,12 @@ public class LogServiceWorker implements Cloneable{
         int port = -1;
         private String workingDir;
 
-        public LogServiceWorker build() {
+        public LogServer build() {
             if(port == -1) {
                 InetSocketAddress addr = NetUtils.createLocalServerAddress();
                 port = addr.getPort();
             }
-            return new LogServiceWorker(meta, port, workingDir);
+            return new LogServer(meta, port, workingDir);
         }
         public Builder setMetaIdentity(String meta) {
             this.meta = meta;

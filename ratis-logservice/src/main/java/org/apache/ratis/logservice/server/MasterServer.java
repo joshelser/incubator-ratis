@@ -18,61 +18,63 @@
 
 package org.apache.ratis.logservice.server;
 
-import com.beust.jcommander.JCommander;
-import com.beust.jcommander.Parameter;
+import static org.apache.ratis.logservice.common.Constants.metaGroupID;
+import static org.apache.ratis.logservice.util.LogServiceUtils.getPeersFromQuorum;
+
+import java.io.Closeable;
+import java.io.File;
+import java.io.IOException;
+import java.util.Collections;
+import java.util.Set;
+
 import org.apache.ratis.conf.RaftProperties;
 import org.apache.ratis.grpc.GrpcConfigKeys;
 import org.apache.ratis.logservice.common.Constants;
 import org.apache.ratis.logservice.util.LogServiceUtils;
 import org.apache.ratis.netty.NettyConfigKeys;
-import org.apache.ratis.protocol.*;
+import org.apache.ratis.protocol.RaftGroup;
+import org.apache.ratis.protocol.RaftPeer;
+import org.apache.ratis.protocol.RaftPeerId;
 import org.apache.ratis.server.RaftServer;
 import org.apache.ratis.server.RaftServerConfigKeys;
 import org.apache.ratis.statemachine.StateMachine;
 import org.apache.ratis.util.FileUtils;
 import org.apache.ratis.util.LifeCycle;
 
-import java.io.Closeable;
-import java.io.File;
-import java.io.IOException;
-import java.net.*;
-import java.nio.file.Path;
-import java.util.Collections;
-import java.util.Set;
-
-import static org.apache.ratis.logservice.common.Constants.metaGroupID;
-import static org.apache.ratis.logservice.util.LogServiceUtils.getPeersFromQuorum;
+import com.beust.jcommander.JCommander;
 
 /**
  * Master quorum is responsible for tracking all available quorum members
  */
 public class MasterServer implements Closeable {
 
-
     // RaftServer internal server. Has meta raft group and MetaStateMachine
     private  RaftServer server;
 
     private String id;
 
-    private String host;
-
-    @Parameter(names = "-port", description = "Port number")
-    private int port = 9999;
-
-    @Parameter(names = "-dir", description = "Working directory")
-    private String workingDir = null;
+    private ServerOpts opts;
 
     private StateMachine metaStateMachine;
 
     private LifeCycle lifeCycle;
 
-    public MasterServer(String hostname, int port, String workingDir) {
-        this.port = port;
-        this.host = hostname;
-        this.workingDir = workingDir;
-        id = host + "_" + port;
-        this.lifeCycle = new LifeCycle(this.id);
+    private static ServerOpts buildOpts(String hostname, int port, String workingDir) {
+      ServerOpts opts = new ServerOpts();
+      opts.host = hostname;
+      opts.port = port;
+      opts.workingDir = workingDir;
+      return opts;
+    }
 
+    public MasterServer(ServerOpts opts) {
+      this.opts = opts;
+      this.id = opts.host + "_" + opts.port;
+      this.lifeCycle = new LifeCycle(this.id);
+    }
+
+    public MasterServer(String hostname, int port, String workingDir) {
+        this(buildOpts(hostname, port, workingDir));
     }
 
     public MasterServer() {
@@ -80,16 +82,19 @@ public class MasterServer implements Closeable {
     }
 
     public void start(String metaGroupId) throws IOException  {
-        if (host == null) {
-            host = LogServiceUtils.getHostName();
+        if (opts.host == null) {
+          opts.host = LogServiceUtils.getHostName();
+        }
+        if (id == null) {
+          id = opts.host + "_" + opts.port;
         }
         this.lifeCycle = new LifeCycle(this.id);
         RaftProperties properties = new RaftProperties();
-        if(workingDir != null) {
-            RaftServerConfigKeys.setStorageDirs(properties, Collections.singletonList(new File(workingDir)));
+        if(opts.workingDir != null) {
+            RaftServerConfigKeys.setStorageDirs(properties, Collections.singletonList(new File(opts.workingDir)));
         }
-        GrpcConfigKeys.Server.setPort(properties, port);
-        NettyConfigKeys.Server.setPort(properties, port);
+        GrpcConfigKeys.Server.setPort(properties, opts.port);
+        NettyConfigKeys.Server.setPort(properties, opts.port);
         Set<RaftPeer> peers = getPeersFromQuorum(metaGroupId);
         RaftGroup metaGroup = RaftGroup.valueOf(Constants.metaGroupID, peers);
         metaStateMachine = new MetaStateMachine();
@@ -109,15 +114,23 @@ public class MasterServer implements Closeable {
     }
 
     public static void main(String[] args) throws IOException {
-        MasterServer master = new MasterServer();
+        ServerOpts opts = new ServerOpts();
         JCommander.newBuilder()
-                .addObject(master)
+                .addObject(opts)
                 .build()
                 .parse(args);
-        master.start(null);
-
-
+        System.out.println(opts);
+        MasterServer master = new MasterServer(opts);
+        master.start(opts.metaQuorum);
+        while (true) {
+          try {
+            Thread.sleep(1000);
+          } catch (InterruptedException e) {
+            return;
+          }
+        }
     }
+
     public static MasterServer.Builder newBuilder() {
         return new MasterServer.Builder();
     }
@@ -132,11 +145,11 @@ public class MasterServer implements Closeable {
     }
 
     public String getAddress() {
-        return host + ":" + port;
+        return opts.host + ":" + opts.port;
     }
 
     public void cleanUp() throws IOException {
-        FileUtils.deleteFully(new File(workingDir));
+        FileUtils.deleteFully(new File(opts.workingDir));
     }
 
     public static class Builder {

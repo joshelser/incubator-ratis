@@ -280,6 +280,7 @@ public class LogStateMachine extends BaseStateMachine {
           // DML commands logged by the service?
           list.add(entry.getStateMachineLogEntry().getLogData().toByteArray());
         } catch (RaftLogIOException e) {
+          LOG.debug("Failed to read from RaftLog", e);
           t = e;
           list = null;
           break;

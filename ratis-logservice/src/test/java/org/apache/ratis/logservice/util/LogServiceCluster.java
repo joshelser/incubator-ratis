@@ -19,16 +19,13 @@
 
 package org.apache.ratis.logservice.util;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.ratis.BaseTest;
 import org.apache.ratis.logservice.api.LogName;
 import org.apache.ratis.logservice.api.LogStream;
-import org.apache.ratis.logservice.api.LogInfo;
 import org.apache.ratis.logservice.client.LogServiceClient;
-import org.apache.ratis.logservice.worker.LogServiceWorker;
+import org.apache.ratis.logservice.worker.LogServer;
 import org.apache.ratis.logservice.server.MasterServer;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -41,7 +38,7 @@ import java.util.stream.IntStream;
 
 public class LogServiceCluster implements AutoCloseable {
     private List<MasterServer> masters;
-    private List<LogServiceWorker> workers = new ArrayList<>();
+    private List<LogServer> workers = new ArrayList<>();
     private String baseTestDir = BaseTest.getRootTestDir().getAbsolutePath();
 
     /**
@@ -50,8 +47,8 @@ public class LogServiceCluster implements AutoCloseable {
      */
     public void createWorkers(int numWorkers) {
         String meta = getMetaIdentity();
-        List<LogServiceWorker> newWorkers = IntStream.range(0, numWorkers).parallel().mapToObj(i ->
-                LogServiceWorker.newBuilder()
+        List<LogServer> newWorkers = IntStream.range(0, numWorkers).parallel().mapToObj(i ->
+                LogServer.newBuilder()
                         .setMetaIdentity(meta)
                         .setWorkingDir(baseTestDir + "/workers/" + i)
                         .build()).collect(Collectors.toList());
@@ -111,7 +108,7 @@ public class LogServiceCluster implements AutoCloseable {
     /**
      * @return the current set of the workers
      */
-    public List<LogServiceWorker> getWorkers() {
+    public List<LogServer> getWorkers() {
         return workers;
     }
 
