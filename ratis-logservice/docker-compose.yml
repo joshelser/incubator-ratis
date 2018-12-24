@@ -1,0 +1,116 @@
+version: '3'
+
+networks:
+  logservice:
+    driver: bridge
+
+services:
+  master_1:
+    image: ratis-logservice:latest
+    command: "java -cp 'conf:lib/*' org.apache.ratis.logservice.server.MetadataServer -h master1.logservice.ratis.org -p 9999 -d /tmp/logservice-metadata -q master1.logservice.ratis.org:9999,master2.logservice.ratis.org:9999,master3.logservice.ratis.org:9999"
+    ports:
+     - 9999
+    networks:
+      logservice:
+        aliases:
+          - master1.logservice.ratis.org
+  master_2:
+    image: ratis-logservice:latest
+    command: "java -cp 'conf:lib/*' org.apache.ratis.logservice.server.MetadataServer -h master2.logservice.ratis.org -p 9999 -d /tmp/logservice-metadata -q master1.logservice.ratis.org:9999,master2.logservice.ratis.org:9999,master3.logservice.ratis.org:9999"
+    ports:
+     - 9999
+    networks:
+      logservice:
+        aliases:
+          - master2.logservice.ratis.org
+  master_3:
+    image: ratis-logservice:latest
+    command: "java -cp 'conf:lib/*' org.apache.ratis.logservice.server.MetadataServer -h master3.logservice.ratis.org -p 9999 -d /tmp/logservice-metadata -q master1.logservice.ratis.org:9999,master2.logservice.ratis.org:9999,master3.logservice.ratis.org:9999"
+    ports:
+     - 9999
+    networks:
+      logservice:
+        aliases:
+          - master3.logservice.ratis.org
+  worker_1:
+    image: ratis-logservice:latest
+    command: "java -cp 'conf:lib/*' org.apache.ratis.logservice.server.LogServer -p 9999 -h worker1.logservice.ratis.org -d /tmp/logservice-worker -q master1.logservice.ratis.org:9999,master2.logservice.ratis.org:9999,master3.logservice.ratis.org:9999"
+    ports:
+      - 9999
+    networks:
+      logservice:
+        aliases:
+          - worker1.logservice.ratis.org
+  worker_2:
+    image: ratis-logservice:latest
+    command: "java -cp 'conf:lib/*' org.apache.ratis.logservice.server.LogServer -p 9999 -h worker2.logservice.ratis.org -d /tmp/logservice-worker -q master1.logservice.ratis.org:9999,master2.logservice.ratis.org:9999,master3.logservice.ratis.org:9999"
+    ports:
+      - 9999
+    networks:
+      logservice:
+        aliases:
+          - worker2.logservice.ratis.org
+  worker_3:
+    image: ratis-logservice:latest
+    command: "java -cp 'conf:lib/*' org.apache.ratis.logservice.server.LogServer -p 9999 -h worker3.logservice.ratis.org -d /tmp/logservice-worker -q master1.logservice.ratis.org:9999,master2.logservice.ratis.org:9999,master3.logservice.ratis.org:9999"
+    ports:
+      - 9999
+    networks:
+      logservice:
+        aliases:
+          - worker3.logservice.ratis.org
+#  worker_1:
+#    build:
+#      context: .
+#      args:
+#        portno: 10000
+#        serverclass: "org.apache.ratis.logservice.server.LogServer"
+#        host: "incubator-ratis_worker_1_1"
+#        quorum: "incubator-ratis_master_1_1:9999,incubator-ratis_master_2_1:9999,incubator-ratis_master_3_1:9999"
+#    ports:
+#     - 10000
+#    links:
+#     - "master_1"
+#     - "master_2"
+#     - "master_3"
+#  worker_2:
+#    build:
+#      context: .
+#      args:
+#        portno: 10000
+#        serverclass: "org.apache.ratis.logservice.server.LogServer"
+#        host: "incubator-ratis_worker_2_1"
+#        quorum: "incubator-ratis_master_1_1:9999,incubator-ratis_master_2_1:9999,incubator-ratis_master_3_1:9999"
+#    ports:
+#     - 10000
+#    links:
+#     - "master_1"
+#     - "master_2"
+#     - "master_3"
+#  worker_3:
+#    build:
+#      context: .
+#      args:
+#        portno: 10000
+#        serverclass: "org.apache.ratis.logservice.server.LogServer"
+#        host: "incubator-ratis_worker_3_1"
+#        quorum: "incubator-ratis_master_1_1:9999,incubator-ratis_master_2_1:9999,incubator-ratis_master_3_1:9999"
+#    ports:
+#     - 10000
+#    links:
+#     - "master_1"
+#     - "master_2"
+#     - "master_3"
+#
+#  client:
+#    build:
+#      context: .
+#      args:
+#        serverclass: "org.apache.ratis.logservice.shell.LogServiceShell"
+#        quorum: "incubator-ratis_master_1_1:9999,incubator-ratis_master_2_1:9999,incubator-ratis_master_3_1:9999"
+#    ports:
+#     - 10000
+#    depends_on:
+#     - "worker_1"
+#     - "worker_2"
+#     - "worker_3"
